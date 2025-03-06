@@ -1,3 +1,5 @@
+import { databaseApi } from './databaseApi';
+import { toast } from "@/components/ui/use-toast";
 
 interface RouterConfig {
   host: string;
@@ -14,10 +16,10 @@ interface Lease {
   hostname: string;
   status: 'active' | 'blocked' | 'expired';
   expiryDate: string;
-  bandwidth: '6M/3M' | '10M/5M'; // Updated to match the two package options
+  bandwidth: '6M/3M' | '10M/5M'; 
 }
 
-// Updated to use the public domain
+// Using the public domain
 const DEFAULT_ROUTER_CONFIG: RouterConfig = {
   host: 'af2442995f3a6456.sn.mynetname.net',
   port: 8728,
@@ -155,7 +157,7 @@ class MikrotikAPI {
     return false;
   }
 
-  // Add a method to synchronize leases with Supabase database
+  // Enhanced synchronization method to work with Supabase
   async syncLeasesToDatabase(): Promise<boolean> {
     if (!this.isConnected) {
       await this.connect();
@@ -164,17 +166,76 @@ class MikrotikAPI {
     console.log('Synchronizing leases with Supabase database');
     
     try {
-      // In a real implementation, this would send the leases to Supabase
-      // For now, we'll just log it and return true
+      // Fetch the latest lease data from Mikrotik
       const leases = await this.getLeases();
-      console.log('Leases to sync with database:', leases);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Use the database API to sync the leases to Supabase
+      const success = await databaseApi.syncMikrotikLeases(leases);
       
-      return true;
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Leases successfully synchronized with Supabase database",
+        });
+      } else {
+        toast({
+          title: "Warning",
+          description: "Partial success synchronizing leases. Some items may not have updated.",
+          variant: "destructive"
+        });
+      }
+      
+      return success;
     } catch (error) {
       console.error('Error synchronizing leases with database:', error);
+      toast({
+        title: "Error",
+        description: "Failed to synchronize leases with database. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }
+
+  // Method to auto-block clients based on payment status
+  async blockUnpaidClients(): Promise<boolean> {
+    if (!this.isConnected) {
+      await this.connect();
+    }
+    
+    try {
+      console.log('Running automatic blocking for clients with overdue payments');
+      
+      // This would normally call the Mikrotik API to block
+      // For now, we'll update our mock data based on the client status
+      
+      // Get clients with suspended status (overdue payments)
+      const clients = await databaseApi.getClients();
+      const suspendedClients = clients.filter(client => client.status === 'suspended');
+      
+      if (suspendedClients.length === 0) {
+        console.log('No clients to block');
+        return true;
+      }
+      
+      // Block each client in Mikrotik
+      let successCount = 0;
+      for (const client of suspendedClients) {
+        // Find the lease associated with this client
+        const leaseIndex = this.mockLeases.findIndex(lease => lease.id === client.leaseId);
+        
+        if (leaseIndex !== -1) {
+          // Update the status to blocked
+          this.mockLeases[leaseIndex].status = 'blocked';
+          successCount++;
+        }
+      }
+      
+      console.log(`Successfully blocked ${successCount} of ${suspendedClients.length} clients`);
+      
+      return successCount > 0;
+    } catch (error) {
+      console.error('Error blocking unpaid clients:', error);
       return false;
     }
   }

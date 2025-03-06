@@ -1,5 +1,3 @@
-import { databaseApi } from './databaseApi';
-import { toast } from "@/components/ui/use-toast";
 
 interface RouterConfig {
   host: string;
@@ -16,12 +14,14 @@ interface Lease {
   hostname: string;
   status: 'active' | 'blocked' | 'expired';
   expiryDate: string;
-  bandwidth: '6M/3M' | '10M/5M'; 
+  bandwidth: string;
 }
 
-// Using the public domain
+// Mock data and functions since we can't actually connect to the Mikrotik router
+// In a real app, you would use a library like node-routeros or make API calls
+
 const DEFAULT_ROUTER_CONFIG: RouterConfig = {
-  host: 'af2442995f3a6456.sn.mynetname.net',
+  host: '192.168.1.7',
   port: 8728,
   username: 'titikkoma',
   password: 'titikkoma'
@@ -47,7 +47,7 @@ class MikrotikAPI {
         hostname: 'client-laptop',
         status: 'active',
         expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '6M/3M'
+        bandwidth: '10M/5M'
       },
       {
         id: '2',
@@ -57,7 +57,7 @@ class MikrotikAPI {
         hostname: 'android-phone',
         status: 'active',
         expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '6M/3M'
+        bandwidth: '5M/2M'
       },
       {
         id: '3',
@@ -67,7 +67,7 @@ class MikrotikAPI {
         hostname: 'smart-tv',
         status: 'blocked',
         expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '10M/5M'
+        bandwidth: '20M/10M'
       }
     ];
   }
@@ -138,17 +138,11 @@ class MikrotikAPI {
       await this.connect();
     }
     console.log(`Setting bandwidth for client ${clientId} to ${bandwidth}`);
-    // Only allow the two specified bandwidth options
-    if (bandwidth !== '6M/3M' && bandwidth !== '10M/5M') {
-      console.error('Invalid bandwidth option. Only 6M/3M and 10M/5M are supported.');
-      return false;
-    }
-    
     // Find and update the client in our mock data
     const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
     
     if (leaseIndex !== -1) {
-      this.mockLeases[leaseIndex].bandwidth = bandwidth as '6M/3M' | '10M/5M';
+      this.mockLeases[leaseIndex].bandwidth = bandwidth;
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       return true;
@@ -157,92 +151,9 @@ class MikrotikAPI {
     return false;
   }
 
-  // Enhanced synchronization method to work with Supabase
-  async syncLeasesToDatabase(): Promise<boolean> {
-    if (!this.isConnected) {
-      await this.connect();
-    }
-    
-    console.log('Synchronizing leases with Supabase database');
-    
-    try {
-      // Fetch the latest lease data from Mikrotik
-      const leases = await this.getLeases();
-      
-      // Use the database API to sync the leases to Supabase
-      const success = await databaseApi.syncMikrotikLeases(leases);
-      
-      if (success) {
-        toast({
-          title: "Success",
-          description: "Leases successfully synchronized with Supabase database",
-        });
-      } else {
-        toast({
-          title: "Warning",
-          description: "Partial success synchronizing leases. Some items may not have updated.",
-          variant: "destructive"
-        });
-      }
-      
-      return success;
-    } catch (error) {
-      console.error('Error synchronizing leases with database:', error);
-      toast({
-        title: "Error",
-        description: "Failed to synchronize leases with database. Please try again.",
-        variant: "destructive"
-      });
-      return false;
-    }
-  }
-
-  // Method to auto-block clients based on payment status
-  async blockUnpaidClients(): Promise<boolean> {
-    if (!this.isConnected) {
-      await this.connect();
-    }
-    
-    try {
-      console.log('Running automatic blocking for clients with overdue payments');
-      
-      // This would normally call the Mikrotik API to block
-      // For now, we'll update our mock data based on the client status
-      
-      // Get clients with suspended status (overdue payments)
-      const clients = await databaseApi.getClients();
-      const suspendedClients = clients.filter(client => client.status === 'suspended');
-      
-      if (suspendedClients.length === 0) {
-        console.log('No clients to block');
-        return true;
-      }
-      
-      // Block each client in Mikrotik
-      let successCount = 0;
-      for (const client of suspendedClients) {
-        // Find the lease associated with this client
-        const leaseIndex = this.mockLeases.findIndex(lease => lease.id === client.leaseId);
-        
-        if (leaseIndex !== -1) {
-          // Update the status to blocked
-          this.mockLeases[leaseIndex].status = 'blocked';
-          successCount++;
-        }
-      }
-      
-      console.log(`Successfully blocked ${successCount} of ${suspendedClients.length} clients`);
-      
-      return successCount > 0;
-    } catch (error) {
-      console.error('Error blocking unpaid clients:', error);
-      return false;
-    }
-  }
-
   // Debugging helper for the cron job issue
   testCronJob(): boolean {
-    console.log('Testing cron job connectivity to Mikrotik at', this.config.host);
+    console.log('Testing cron job connectivity');
     return this.isConnected;
   }
 }

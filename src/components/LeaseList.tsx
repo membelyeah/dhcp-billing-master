@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -118,12 +119,12 @@ const LeaseList = () => {
         setLeases(prevLeases => 
           prevLeases.map(lease => 
             lease.id === selectedLease.id 
-              ? { ...lease, bandwidth: bandwidthValue as '6M/3M' | '10M/5M' } 
+              ? { ...lease, bandwidth: bandwidthValue } 
               : lease
           )
         );
         setSelectedLease(prev => 
-          prev ? { ...prev, bandwidth: bandwidthValue as '6M/3M' | '10M/5M' } : null
+          prev ? { ...prev, bandwidth: bandwidthValue } : null
         );
       }
     } catch (error) {
@@ -246,7 +247,7 @@ const LeaseList = () => {
         </CardContent>
       </Card>
       
-      {/* Lease Details Dialog - update the bandwidth options */}
+      {/* Lease Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -324,8 +325,10 @@ const LeaseList = () => {
                         <SelectValue placeholder="Select bandwidth" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="6M/3M">6M/3M - Rp 100.000</SelectItem>
-                        <SelectItem value="10M/5M">10M/5M - Rp 150.000</SelectItem>
+                        <SelectItem value="1M/512K">1M/512K - Basic</SelectItem>
+                        <SelectItem value="5M/2M">5M/2M - Standard</SelectItem>
+                        <SelectItem value="10M/5M">10M/5M - Premium</SelectItem>
+                        <SelectItem value="20M/10M">20M/10M - Ultimate</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button 

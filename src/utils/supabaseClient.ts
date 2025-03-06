@@ -8,3 +8,19 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 // Initialize the Supabase client
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+
+// Add status check function to verify Supabase connection
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.from('clients').select('id').limit(1);
+    if (error) {
+      console.error('Supabase connection test failed:', error.message);
+      return false;
+    }
+    console.log('Supabase connection successful');
+    return true;
+  } catch (err) {
+    console.error('Supabase connection error:', err);
+    return false;
+  }
+};

@@ -1,4 +1,3 @@
-
 import { supabase } from './supabaseClient';
 import { toast } from "@/components/ui/use-toast";
 
@@ -359,6 +358,22 @@ class DatabaseAPI {
         variant: "destructive"
       });
       return false;
+    }
+  }
+
+  // Add the missing simulateCronJob method
+  simulateCronJob(): string {
+    if (!this.isConnected) {
+      return "ERROR: Not connected to database";
+    }
+    
+    // This is a simulation of a cron job that would typically run on a server
+    const randomSuccess = Math.random() > 0.2; // 80% success rate for simulation
+    
+    if (randomSuccess) {
+      return "SUCCESS: Cron job simulation completed successfully";
+    } else {
+      return "ERROR: Cron job simulation failed";
     }
   }
 

@@ -27,7 +27,13 @@ export function useSupabaseFetch<T>(
           const [operator, operandValue] = Object.entries(value)[0];
           switch (operator) {
             case 'in':
-              query = query.in(column, operandValue);
+              // Fix: Ensure operandValue is an array before using the .in() method
+              if (Array.isArray(operandValue)) {
+                query = query.in(column, operandValue);
+              } else {
+                // If not an array, convert to array or use default behavior
+                query = query.eq(column, operandValue);
+              }
               break;
             case 'gt':
               query = query.gt(column, operandValue);

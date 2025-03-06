@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import Header from "@/components/Header";
 import StatusCard from "@/components/StatusCard";
@@ -187,7 +186,7 @@ const Index = () => {
                   <div>
                     <h4 className="text-sm font-medium">Mikrotik Connection</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Connected to your Mikrotik router at af2442995f3a6456.sn.mynetname.net.
+                      Connected to your Mikrotik router at hfa09f7ncsn.sn.mynetname.net.
                     </p>
                   </div>
                 </div>

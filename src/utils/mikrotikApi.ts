@@ -1,3 +1,4 @@
+
 import { databaseApi } from './databaseApi';
 import { toast } from "@/components/ui/use-toast";
 
@@ -19,9 +20,9 @@ interface Lease {
   bandwidth: '6M/3M' | '10M/5M'; 
 }
 
-// Using the public domain
+// Using the provided hostname
 const DEFAULT_ROUTER_CONFIG: RouterConfig = {
-  host: '192.168.1.7', // Updated to match your configuration
+  host: 'hfa09f7ncsn.sn.mynetname.net', // Updated to use your hostname
   port: 8728,
   username: 'titikkoma', 
   password: 'titikkoma'

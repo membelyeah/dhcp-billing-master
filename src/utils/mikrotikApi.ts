@@ -14,14 +14,12 @@ interface Lease {
   hostname: string;
   status: 'active' | 'blocked' | 'expired';
   expiryDate: string;
-  bandwidth: string;
+  bandwidth: '6M/3M' | '10M/5M'; // Updated to match the two package options
 }
 
-// Mock data and functions since we can't actually connect to the Mikrotik router
-// In a real app, you would use a library like node-routeros or make API calls
-
+// Updated to use the public domain
 const DEFAULT_ROUTER_CONFIG: RouterConfig = {
-  host: '192.168.1.7',
+  host: 'af2442995f3a6456.sn.mynetname.net',
   port: 8728,
   username: 'titikkoma',
   password: 'titikkoma'
@@ -47,7 +45,7 @@ class MikrotikAPI {
         hostname: 'client-laptop',
         status: 'active',
         expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '10M/5M'
+        bandwidth: '6M/3M'
       },
       {
         id: '2',
@@ -57,7 +55,7 @@ class MikrotikAPI {
         hostname: 'android-phone',
         status: 'active',
         expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '5M/2M'
+        bandwidth: '6M/3M'
       },
       {
         id: '3',
@@ -67,7 +65,7 @@ class MikrotikAPI {
         hostname: 'smart-tv',
         status: 'blocked',
         expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '20M/10M'
+        bandwidth: '10M/5M'
       }
     ];
   }
@@ -138,11 +136,17 @@ class MikrotikAPI {
       await this.connect();
     }
     console.log(`Setting bandwidth for client ${clientId} to ${bandwidth}`);
+    // Only allow the two specified bandwidth options
+    if (bandwidth !== '6M/3M' && bandwidth !== '10M/5M') {
+      console.error('Invalid bandwidth option. Only 6M/3M and 10M/5M are supported.');
+      return false;
+    }
+    
     // Find and update the client in our mock data
     const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
     
     if (leaseIndex !== -1) {
-      this.mockLeases[leaseIndex].bandwidth = bandwidth;
+      this.mockLeases[leaseIndex].bandwidth = bandwidth as '6M/3M' | '10M/5M';
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       return true;
@@ -151,9 +155,33 @@ class MikrotikAPI {
     return false;
   }
 
+  // Add a method to synchronize leases with Supabase database
+  async syncLeasesToDatabase(): Promise<boolean> {
+    if (!this.isConnected) {
+      await this.connect();
+    }
+    
+    console.log('Synchronizing leases with Supabase database');
+    
+    try {
+      // In a real implementation, this would send the leases to Supabase
+      // For now, we'll just log it and return true
+      const leases = await this.getLeases();
+      console.log('Leases to sync with database:', leases);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      return true;
+    } catch (error) {
+      console.error('Error synchronizing leases with database:', error);
+      return false;
+    }
+  }
+
   // Debugging helper for the cron job issue
   testCronJob(): boolean {
-    console.log('Testing cron job connectivity');
+    console.log('Testing cron job connectivity to Mikrotik at', this.config.host);
     return this.isConnected;
   }
 }

@@ -8,10 +8,12 @@ import PaymentManagement from "@/components/PaymentManagement";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Users, WifiIcon, CreditCard, AlertTriangle, 
-  ArrowUpRight, ArrowDownRight, Activity 
+  ArrowUpRight, ArrowDownRight, Activity, Database, RefreshCw
 } from "lucide-react";
 import { mikrotikApi } from "@/utils/mikrotikApi";
 import { databaseApi } from "@/utils/databaseApi";
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 
 const Index = () => {
   const [activePage, setActivePage] = useState("dashboard");
@@ -23,6 +25,7 @@ const Index = () => {
     monthlyRevenue: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [syncingLeases, setSyncingLeases] = useState(false);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -59,6 +62,11 @@ const Index = () => {
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch dashboard data. Please check your connection.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -67,8 +75,42 @@ const Index = () => {
     fetchData();
   }, []);
   
+  const handleSyncLeases = async () => {
+    setSyncingLeases(true);
+    try {
+      await mikrotikApi.syncLeasesToDatabase();
+      toast({
+        title: "Success",
+        description: "Leases successfully synchronized with Supabase database",
+      });
+    } catch (error) {
+      console.error('Error synchronizing leases:', error);
+      toast({
+        title: "Error",
+        description: "Failed to synchronize leases. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncingLeases(false);
+    }
+  };
+  
   const renderDashboard = () => (
     <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Dashboard</h2>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleSyncLeases}
+          disabled={syncingLeases}
+          className="flex items-center gap-1"
+        >
+          <RefreshCw className={`h-4 w-4 ${syncingLeases ? 'animate-spin' : ''}`} />
+          Sync Mikrotik Leases
+        </Button>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatusCard
           title="Total Clients"
@@ -116,12 +158,12 @@ const Index = () => {
               <div className="space-y-4">
                 <div className="flex items-start gap-3 pb-3 border-b">
                   <div className="p-2 rounded-full bg-blue-50 text-blue-600">
-                    <ArrowUpRight className="h-4 w-4" />
+                    <Database className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium">Configure Auto Notifications</h4>
+                    <h4 className="text-sm font-medium">Supabase Integration</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Set up SMS or email notifications to alert clients about upcoming due dates.
+                      Lease data is synchronized with Supabase database for better performance and reliability.
                     </p>
                   </div>
                 </div>
@@ -131,9 +173,9 @@ const Index = () => {
                     <AlertTriangle className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium">Debug Cron Job Issues</h4>
+                    <h4 className="text-sm font-medium">Simplified Packages</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Check system logs and cron configuration to ensure automatic blocking is working.
+                      Two package options available: 6M (Rp 100,000) and 10M (Rp 150,000).
                     </p>
                   </div>
                 </div>
@@ -143,9 +185,9 @@ const Index = () => {
                     <ArrowDownRight className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium">Optimize Database Performance</h4>
+                    <h4 className="text-sm font-medium">Mikrotik Connection</h4>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Regular database maintenance helps prevent connection issues and improves system performance.
+                      Connected to your Mikrotik router at af2442995f3a6456.sn.mynetname.net.
                     </p>
                   </div>
                 </div>

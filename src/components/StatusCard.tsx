@@ -13,6 +13,7 @@ interface StatusCardProps {
   };
   className?: string;
   onClick?: () => void;
+  style?: React.CSSProperties; // Add style prop to the interface
 }
 
 const StatusCard = ({
@@ -22,7 +23,8 @@ const StatusCard = ({
   icon,
   trend,
   className,
-  onClick
+  onClick,
+  style // Add style to the component props
 }: StatusCardProps) => {
   return (
     <Card 
@@ -32,6 +34,7 @@ const StatusCard = ({
         className
       )}
       onClick={onClick}
+      style={style} // Apply the style to the Card component
     >
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>

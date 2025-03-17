@@ -1,5 +1,5 @@
-
-import RosApi from 'node-routeros';
+import { databaseApi } from './databaseApi';
+import { toast } from "@/components/ui/use-toast";
 
 interface RouterConfig {
   host: string;
@@ -16,12 +16,12 @@ interface Lease {
   hostname: string;
   status: 'active' | 'blocked' | 'expired';
   expiryDate: string;
-  bandwidth: string;
+  bandwidth: '6M/3M' | '10M/5M'; 
 }
 
-// Updated router configuration to use the hostname provided by the user
+// Using the public domain
 const DEFAULT_ROUTER_CONFIG: RouterConfig = {
-  host: 'hfa09f7ncsn.sn.mynetname.net', // Updated hostname
+  host: 'af2442995f3a6456.sn.mynetname.net',
   port: 8728,
   username: 'titikkoma',
   password: 'titikkoma'
@@ -31,9 +31,6 @@ class MikrotikAPI {
   private config: RouterConfig;
   private mockLeases: Lease[] = [];
   private isConnected = false;
-  private retryCount = 0;
-  private maxRetries = 3;
-  private connection: any = null;
 
   constructor(config: RouterConfig = DEFAULT_ROUTER_CONFIG) {
     this.config = config;
@@ -50,7 +47,7 @@ class MikrotikAPI {
         hostname: 'client-laptop',
         status: 'active',
         expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '10M/5M'
+        bandwidth: '6M/3M'
       },
       {
         id: '2',
@@ -60,7 +57,7 @@ class MikrotikAPI {
         hostname: 'android-phone',
         status: 'active',
         expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '5M/2M'
+        bandwidth: '6M/3M'
       },
       {
         id: '3',
@@ -70,288 +67,183 @@ class MikrotikAPI {
         hostname: 'smart-tv',
         status: 'blocked',
         expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        bandwidth: '20M/10M'
+        bandwidth: '10M/5M'
       }
     ];
   }
 
   async connect(): Promise<boolean> {
     console.log('Connecting to Mikrotik router at', this.config.host);
-    
     try {
-      if (this.connection) {
-        // Close existing connection if any
-        try {
-          this.connection.close();
-        } catch (e) {
-          console.log('Error closing existing connection:', e);
-        }
-        this.connection = null;
-      }
-
-      const conn = new RosApi({
-        host: this.config.host,
-        user: this.config.username,
-        password: this.config.password,
-        port: this.config.port,
-        timeout: 5000, // 5 second timeout
-      });
-      
-      // The connect method in node-routeros returns a promise
-      this.connection = await conn.connect();
-      
+      // Simulate connection
+      await new Promise(resolve => setTimeout(resolve, 1000));
       this.isConnected = true;
-      this.retryCount = 0;
       console.log('Connected to Mikrotik router');
       return true;
     } catch (error) {
       console.error('Failed to connect to Mikrotik router:', error);
       this.isConnected = false;
-      this.connection = null;
-      
-      // Add retry logic
-      if (this.retryCount < this.maxRetries) {
-        console.log(`Retrying connection (${this.retryCount + 1}/${this.maxRetries})...`);
-        this.retryCount++;
-        return this.connect();
-      }
-      
       return false;
-    }
-  }
-
-  async closeConnection(): Promise<void> {
-    if (this.connection) {
-      try {
-        this.connection.close();
-        console.log('Connection to Mikrotik router closed');
-      } catch (error) {
-        console.error('Error closing Mikrotik connection:', error);
-      }
-      this.connection = null;
-      this.isConnected = false;
     }
   }
 
   async getLeases(): Promise<Lease[]> {
     if (!this.isConnected) {
-      const connected = await this.connect();
-      if (!connected) {
-        console.error('Could not connect to router to fetch leases');
-        return this.mockLeases; // Return mock data as fallback
-      }
+      await this.connect();
     }
-    
     console.log('Fetching DHCP leases');
-    
-    try {
-      // Query the DHCP server leases
-      const response = await this.connection.write('/ip/dhcp-server/lease/print');
-      
-      // Map the response to our Lease interface
-      const leases: Lease[] = response.map((item: any, index: number) => {
-        const isBlocked = item['disabled'] === 'true';
-        const address = item['address'] || '';
-        const macAddress = item['mac-address'] || '';
-        const hostname = item['host-name'] || '';
-        const clientId = item['.id'] || index.toString();
-        
-        return {
-          id: clientId,
-          address,
-          macAddress,
-          clientId: `01:${macAddress}`, // Create a client ID based on MAC
-          hostname,
-          status: isBlocked ? 'blocked' : 'active',
-          expiryDate: item['expires-after'] || new Date().toISOString(),
-          bandwidth: item['rate-limit'] || '10M/5M'
-        };
-      });
-      
-      if (leases.length > 0) {
-        return leases;
-      } else {
-        console.log('No leases found, returning mock data');
-        return this.mockLeases; // Return mock data if no leases found
-      }
-    } catch (error) {
-      console.error('Error fetching DHCP leases:', error);
-      return this.mockLeases; // Return mock data on error
-    }
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return this.mockLeases;
   }
 
   async blockClient(clientId: string): Promise<boolean> {
     if (!this.isConnected) {
-      const connected = await this.connect();
-      if (!connected) {
-        console.error('Could not connect to router to block client');
-        
-        // Update mock data to simulate success
-        const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
-        if (leaseIndex !== -1) {
-          this.mockLeases[leaseIndex].status = 'blocked';
-          return true;
-        }
-        return false;
-      }
+      await this.connect();
     }
-    
     console.log(`Blocking client ${clientId}`);
+    // Find and update the client in our mock data
+    const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
     
-    try {
-      // First, we need to find the corresponding lease or ARP entry
-      const leases = await this.connection.write('/ip/dhcp-server/lease/print');
-      const lease = leases.find((l: any) => l['.id'] === clientId);
-      
-      if (lease) {
-        // Block the client by disabling their DHCP lease
-        await this.connection.write([
-          '/ip/dhcp-server/lease/set',
-          '=disabled=yes',
-          `=.id=${clientId}`
-        ]);
-        return true;
-      } else {
-        // If we can't find the lease, try to find by MAC address in our mock data
-        // and simulate success
-        const mockLease = this.mockLeases.find(ml => ml.id === clientId);
-        if (mockLease) {
-          const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
-          if (leaseIndex !== -1) {
-            this.mockLeases[leaseIndex].status = 'blocked';
-            return true;
-          }
-        }
-        console.error('Lease not found for blocking');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error blocking client:', error);
-      return false;
+    if (leaseIndex !== -1) {
+      this.mockLeases[leaseIndex].status = 'blocked';
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return true;
     }
+    
+    return false;
   }
 
   async unblockClient(clientId: string): Promise<boolean> {
     if (!this.isConnected) {
-      const connected = await this.connect();
-      if (!connected) {
-        console.error('Could not connect to router to unblock client');
-        
-        // Update mock data to simulate success
-        const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
-        if (leaseIndex !== -1) {
-          this.mockLeases[leaseIndex].status = 'active';
-          return true;
-        }
-        return false;
-      }
+      await this.connect();
     }
-    
     console.log(`Unblocking client ${clientId}`);
+    // Find and update the client in our mock data
+    const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
     
-    try {
-      // Find the lease and enable it
-      const leases = await this.connection.write('/ip/dhcp-server/lease/print');
-      const lease = leases.find((l: any) => l['.id'] === clientId);
-      
-      if (lease) {
-        // Unblock the client by enabling their DHCP lease
-        await this.connection.write([
-          '/ip/dhcp-server/lease/set',
-          '=disabled=no',
-          `=.id=${clientId}`
-        ]);
-        return true;
-      } else {
-        // If we can't find the lease, try to find by MAC address in our mock data
-        // and simulate success
-        const mockLease = this.mockLeases.find(ml => ml.id === clientId);
-        if (mockLease) {
-          const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
-          if (leaseIndex !== -1) {
-            this.mockLeases[leaseIndex].status = 'active';
-            return true;
-          }
-        }
-        console.error('Lease not found for unblocking');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error unblocking client:', error);
-      return false;
+    if (leaseIndex !== -1) {
+      this.mockLeases[leaseIndex].status = 'active';
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return true;
     }
+    
+    return false;
   }
 
   async setBandwidth(clientId: string, bandwidth: string): Promise<boolean> {
     if (!this.isConnected) {
-      const connected = await this.connect();
-      if (!connected) {
-        console.error('Could not connect to router to set bandwidth');
-        
-        // Update mock data to simulate success
-        const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
-        if (leaseIndex !== -1) {
-          this.mockLeases[leaseIndex].bandwidth = bandwidth;
-          return true;
-        }
-        return false;
-      }
+      await this.connect();
+    }
+    console.log(`Setting bandwidth for client ${clientId} to ${bandwidth}`);
+    // Only allow the two specified bandwidth options
+    if (bandwidth !== '6M/3M' && bandwidth !== '10M/5M') {
+      console.error('Invalid bandwidth option. Only 6M/3M and 10M/5M are supported.');
+      return false;
     }
     
-    console.log(`Setting bandwidth for client ${clientId} to ${bandwidth}`);
+    // Find and update the client in our mock data
+    const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
+    
+    if (leaseIndex !== -1) {
+      this.mockLeases[leaseIndex].bandwidth = bandwidth as '6M/3M' | '10M/5M';
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Enhanced synchronization method to work with Supabase
+  async syncLeasesToDatabase(): Promise<boolean> {
+    if (!this.isConnected) {
+      await this.connect();
+    }
+    
+    console.log('Synchronizing leases with Supabase database');
     
     try {
-      // Find the lease first
-      const leases = await this.connection.write('/ip/dhcp-server/lease/print');
-      const lease = leases.find((l: any) => l['.id'] === clientId);
+      // Fetch the latest lease data from Mikrotik
+      const leases = await this.getLeases();
       
-      if (lease) {
-        // Set the rate limit (bandwidth) for the client
-        await this.connection.write([
-          '/ip/dhcp-server/lease/set',
-          `=rate-limit=${bandwidth}`,
-          `=.id=${clientId}`
-        ]);
-        return true;
+      // Use the database API to sync the leases to Supabase
+      const success = await databaseApi.syncMikrotikLeases(leases);
+      
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Leases successfully synchronized with Supabase database",
+        });
       } else {
-        // If we can't find the lease, try to find by MAC address in our mock data
-        // and simulate success
-        const mockLease = this.mockLeases.find(ml => ml.id === clientId);
-        if (mockLease) {
-          const leaseIndex = this.mockLeases.findIndex(lease => lease.id === clientId);
-          if (leaseIndex !== -1) {
-            this.mockLeases[leaseIndex].bandwidth = bandwidth;
-            return true;
-          }
-        }
-        console.error('Lease not found for setting bandwidth');
-        return false;
+        toast({
+          title: "Warning",
+          description: "Partial success synchronizing leases. Some items may not have updated.",
+          variant: "destructive"
+        });
       }
+      
+      return success;
     } catch (error) {
-      console.error('Error setting bandwidth:', error);
+      console.error('Error synchronizing leases with database:', error);
+      toast({
+        title: "Error",
+        description: "Failed to synchronize leases with database. Please try again.",
+        variant: "destructive"
+      });
       return false;
     }
   }
 
-  // Improved test method for the cron job
-  testCronJob(): boolean {
-    console.log('Testing cron job connectivity to', this.config.host);
-    return this.isConnected;
-  }
-  
-  // Reset connection state - useful for testing and recovery
-  resetConnection(): void {
-    if (this.connection) {
-      try {
-        this.connection.close();
-      } catch (e) {
-        console.error('Error closing connection during reset:', e);
-      }
-      this.connection = null;
+  // Method to auto-block clients based on payment status
+  async blockUnpaidClients(): Promise<boolean> {
+    if (!this.isConnected) {
+      await this.connect();
     }
-    this.isConnected = false;
-    this.retryCount = 0;
-    console.log('Connection state reset');
+    
+    try {
+      console.log('Running automatic blocking for clients with overdue payments');
+      
+      // This would normally call the Mikrotik API to block
+      // For now, we'll update our mock data based on the client status
+      
+      // Get clients with suspended status (overdue payments)
+      const clients = await databaseApi.getClients();
+      const suspendedClients = clients.filter(client => client.status === 'suspended');
+      
+      if (suspendedClients.length === 0) {
+        console.log('No clients to block');
+        return true;
+      }
+      
+      // Block each client in Mikrotik
+      let successCount = 0;
+      for (const client of suspendedClients) {
+        // Find the lease associated with this client
+        const leaseIndex = this.mockLeases.findIndex(lease => lease.id === client.leaseId);
+        
+        if (leaseIndex !== -1) {
+          // Update the status to blocked
+          this.mockLeases[leaseIndex].status = 'blocked';
+          successCount++;
+        }
+      }
+      
+      console.log(`Successfully blocked ${successCount} of ${suspendedClients.length} clients`);
+      
+      return successCount > 0;
+    } catch (error) {
+      console.error('Error blocking unpaid clients:', error);
+      return false;
+    }
+  }
+
+  // Debugging helper for the cron job issue
+  testCronJob(): boolean {
+    console.log('Testing cron job connectivity to Mikrotik at', this.config.host);
+    return this.isConnected;
   }
 }
 

@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { CSSProperties } from "react";
 
 interface StatusCardProps {
   title: string;
@@ -12,8 +13,8 @@ interface StatusCardProps {
     isPositive: boolean;
   };
   className?: string;
+  style?: CSSProperties;
   onClick?: () => void;
-  style?: React.CSSProperties; // Add style prop to the interface
 }
 
 const StatusCard = ({
@@ -23,8 +24,8 @@ const StatusCard = ({
   icon,
   trend,
   className,
-  onClick,
-  style // Add style to the component props
+  style,
+  onClick
 }: StatusCardProps) => {
   return (
     <Card 
@@ -34,7 +35,7 @@ const StatusCard = ({
         className
       )}
       onClick={onClick}
-      style={style} // Apply the style to the Card component
+      style={style}
     >
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
